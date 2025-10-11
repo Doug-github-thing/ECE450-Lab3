@@ -33,10 +33,7 @@ void sobel (ap_int<8> in[WIDTH][HEIGHT], ap_int<8> out[WIDTH][HEIGHT])
 
     // Define Sobel kernels.
     // Typically they're shown as 3x3 matrix with 0s in the middle. That's wasted space.
-    const ap_int<2> sobel[] = {1, 2, 1};    
-
-    ap_int<9> G[WIDTH][HEIGHT];
-
+    
     // Simple starter code for testing the testbench before implementation of filter begins
     RowsLoop: for (int i=1; i<HEIGHT-1; ++i) {
         ColsLoop: for (int j=1; j<WIDTH-1; ++j) {
@@ -47,16 +44,16 @@ void sobel (ap_int<8> in[WIDTH][HEIGHT], ap_int<8> out[WIDTH][HEIGHT])
 
             // Sobel kernel (1,2,1) to the left and right, subtracted
             int Gx = (in[i-1][j+1])+(2*in[i][j+1])+(in[i+1][j+1])
-                   - ((in[i-1][j-1])+(2*in[i][j-1])+(in[i+1][j-1]));
+                  - ((in[i-1][j-1])+(2*in[i][j-1])+(in[i+1][j-1]));
             
             // Sobel kernel (1,2,1) to the below and top, subtracted
             int Gy = (in[i+1][j-1])+(2*in[i+1][j])+(in[i+1][j+1]) 
-                   - ((in[i-1][j-1])+(2*in[i-1][j])+(in[i-1][j+1]));
+                  - ((in[i-1][j-1])+(2*in[i-1][j])+(in[i-1][j+1]));
+            
+            // Hypotenuse between x and y axis
+            ap_int<9> G = sqrtf(Gx*Gx + Gy*Gy);
 
-            // // Hypotenuse between x and y axis
-            int G = sqrtf(Gx*Gx + Gy*Gy);
-
-            // // Normalize back to 255 range
+            // Normalize back to 255 range
             out[i][j] = (G  * 255 / 1443);
         }
     }
