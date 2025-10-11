@@ -1,0 +1,26 @@
+[
+  {
+    "directory": "/home/dog/school/fpgaece450/p3/sobel",
+    "arguments": [
+      "/Xilinx/2025.1/Vitis/vcxx/libexec/clang++",
+      "--gcc-toolchain=/Xilinx/2025.1/Vitis/tps/lnx64/gcc-8.3.0",
+      "-fhls",
+      "-hls-syn-headers-dir=/Xilinx/2025.1/Vitis/common/technology/autopilot",
+      "-c",
+      "/home/dog/school/fpgaece450/p3/sobel/../sobel.cpp"
+    ],
+    "file": "/home/dog/school/fpgaece450/p3/sobel/../sobel.cpp"
+  },
+  {
+    "directory": "/home/dog/school/fpgaece450/p3/sobel",
+    "arguments": [
+      "/Xilinx/2025.1/Vitis/vcxx/libexec/clang++",
+      "--gcc-toolchain=/Xilinx/2025.1/Vitis/tps/lnx64/gcc-8.3.0",
+      "-fhls-tb",
+      "-hls-sim-headers-dir=/Xilinx/2025.1/Vitis/include",
+      "-c",
+      "/home/dog/school/fpgaece450/p3/sobel/../testbench.cpp"
+    ],
+    "file": "/home/dog/school/fpgaece450/p3/sobel/../testbench.cpp"
+  }
+]
