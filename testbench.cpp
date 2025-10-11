@@ -51,14 +51,14 @@ int main() {
     std::cout << "!!!! Starting test !!!!" << std::endl;
     
     ap_int<8> in_bytes[512][512];
-    // ap_int<8> out_bytes[512][512];
+    ap_int<8> out_bytes[512][512];
     
     if(!read_ppm(INPUT_PATH, in_bytes))
         return -1;
 
-    // sobel(in_bytes, &out_bytes);
+    sobel(in_bytes, out_bytes);
     
-    if(!write_ppm(OUTPUT_PATH, in_bytes))
+    if(!write_ppm(OUTPUT_PATH, out_bytes))
         return -1;
 
     std::cout << ".... Finshing test ...." << std::endl;
