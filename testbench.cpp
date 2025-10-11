@@ -4,48 +4,50 @@
 #include <array>
 #include <fstream>
 #include <memory>
+// #include "sobel.cpp"
 
-#define input_path "sobel_in.ppm"
-#define output_path "sobel_out_tb.ppm"
+#define INPUT_PATH "/home/dog/school/fpgaece450/p3/sobel_in.ppm"
+#define OUTPUT_PATH "/home/dog/school/fpgaece450/p3/sobel_out_tb.ppm"
+#define WIDTH 512
+#define HEIGHT 512
 
-void sobel (ap_int<8> in_bytes[512][512], ap_int<8> out_bytes[512][512]);
+void sobel (ap_int<8> in_bytes[WIDTH][HEIGHT], ap_int<8> out_bytes[WIDTH][HEIGHT]);
+
+
+// Simple P5 (binary) PPM reader/writer for grayscale images
+bool read_ppm(const char* filename, uint8_t img[HEIGHT][WIDTH]) {
+    std::ifstream file(filename, std::ios::binary);
+    if (!file) {
+        std::cout << "File does not exist" << std::endl;
+        return false;
+    }
+
+    std::string header;
+    int w, h, maxval;
+    file >> header >> w >> h >> maxval;
+    file.ignore(1); // skip newline
+    if (header != "P6" || w != WIDTH || h != HEIGHT || maxval != 255) {
+        std::cout << "Incorrect file header" << std::endl;
+        return false;
+    }
+
+    file.read(reinterpret_cast<char*>(img), WIDTH * HEIGHT);
+    return true;
+}
+
 
 int main() {
 
-    // std::ifstream in( input_path, std::ios::binary );
-    // std::ofstream out( output_path, std::ios::binary );
 
-    FILE* in = fopen(input_path, "rb");
-    unsigned char* buffer = new unsigned char[14+512*512];
-    fread(buffer, 14+512*512, 14+512*512, in);
+    std::cout << "!!!! Starting test !!!!" << std::endl;
+    
+    uint8_t in_bytes[512][512];
+    uint8_t out_bytes[512][512];
+    
+    if(!read_ppm(INPUT_PATH, in_bytes))
+        return -1;
 
-    ap_int<8> in_bytes[512][512];
-    ap_int<8> out_bytes[512][512];
-
-    // for (int i=0; i<512; ++i)
-    //     for (int j=0; j<512; ++j)
-    //         in_bytes[i][j] = in.read();
-
-    // in.seekg( 0, std::ios::end );
-    // auto size = in.tellg();
-    // in.seekg( 0 );
-
-    // char buffer[512];
-
-    // std::cout << "Gonna read bytes now" << std::endl;
-    // in.read( buffer, 512 );
-    std::cout << "Got bytes. Gonna print them now" << std::endl;
-
-    for (int i=0; i<512*512; ++i)
-        std::cout << buffer[i];
-    delete[] buffer;
-
-    // out.write( buffer.get(), size );
-
-    std::cout << "Done testing" << std::endl;
-
-    fclose(in);
-    // out.close();
+    std::cout << ".... Finshing test ...." << std::endl;
 
     return 0;
 }
