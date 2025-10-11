@@ -1,24 +1,11 @@
-#include <stdio.h>
+#include <ap_int.h>
 
-void fir_filter( int in[256], int out[256]);
+void compute_c (ap_int<8> in_bytes[512][512], ap_int<8> out_bytes[512][512])
+{
+    #pragma HLS INTERFACE ap_none port=in_bytes
+    #pragma HLS INTERFACE ap_none port=out_bytes
+    // #pragma HLS INTERFACE ap_ctrl_none port=return <- Not applicable since this circuit requires control flow
 
-int main() {
-	int input[256], output[256];
-
-	// Define initial test wave input
-	for (int i=0; i<256; ++i)
-		input[i] = i;
-
-	// Run it through the filter
-	fir_filter(input, output);
-
-	// Print the results
-	for (int i=0; i<256; ++i)
-		printf("result = %d\n", output[i]);
-
-	// have to check the final output value AFTER completion of the loop.
-	// If the filter does not work as intended, the TB will terminate prematurely
-	if (output[255] != -1452)
-		return 1;
-	return 0;
+    // Simple starter code for testing the testbench before implementation of filter begins
+    out_bytes = in_bytes;
 }

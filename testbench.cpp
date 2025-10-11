@@ -1,39 +1,67 @@
+#include <iostream>
 #include <ap_int.h>
+#include <array>
 
-const int size = 256;
-const int N_TAPS = 16;
+void compute_c (ap_int<16> a, ap_int<16> b, ap_int<16> &c);
 
-const ap_int<4> co_eff[] = {1, 2, 0, -3, 0, 4, -5, 0, 1, -2, 0, -3, 0, 4, -5, 0};
+void test(ap_int<16> a, ap_int<16> b, bool expect_correct, ap_int<16> &c) {
+    compute_c(a, b, c);
 
-int shift_reg[N_TAPS];
+    bool correct = a*a - b*b == c*c;
+    std::cout << ((expect_correct == correct) ? "Test case passed - " : "Test case failed - ");
+    std::cout << (correct ? "c is valid" : "c is invalid");
+    std::cout << ": a=" << a << ", b=" << b << " => c=" << c << std::endl;
+}
 
-void fir_filter(int in[size], int out[size]) {
+struct ab_pair {
+    ap_int<16> a;
+    ap_int<16> b;
+    bool pass;
+};
 
-    // #pragma HLS PIPELINE
+int main() {
+    ap_int<16> c;
+
+    // Define the pairs to be tested one at a time
+    ab_pair pairs[] = {
+        // Test normal pythagorean triples - Expect PASS
+        {0, 0, true},
+        {1, 1, true},
+        {5, 3, true},
+        {181, 180, true},
+        {29, 21, true},
+        // Same cases, but negative now - Expect PASS
+        {-5, -3, true},
+        {-181, -180, true},
+        {-29, -21, true},
+        {5, -3, true},
+        {181, -180, true},
+        {29, -21, true},
+        {-5, 3, true},
+        {-181, 180, true},
+        {-29, 21, true},
+        // Valid Pythagorean triple where intermediate terms are greater than 16 bits
+        {32500, 19500, true},
+        {32500, -19500, true},
+        {-32500, 19500, true},
+        {-32500, -19500, true},
+        // Valid Pythagorean triples too big to fit in the 16 bit signed range - Expect FAIL
+        {65000, 52000, false},
+        // Test non-pythagorean triples - Expect FAIL
+        {15,7, false},
+        {280, 16, false},
+        {365, 363, false},
+        {32500, 19501, false},
+        // Cases where b^2 > a^2 - Expect FAIL
+        {4, 5, false},
+        {21, 29, false},
+        {-4, -5, false},
+        {-21, -29, false}
+    };
+
+    // Test each a/b pair at a time
+    for (auto &p: pairs)
+        test(p.a, p.b, p.pass, c);
     
-	// total filter size start
-    Outer:for (int i=0; i<size; ++i) {
-        // #pragma HLS UNROLL factor=4
-        #pragma HLS PIPELINE
-
-        // shifting accumulation points
-        SHIFT:for (int k=N_TAPS-1; k>0; --k) {
-            // #pragma HLS UNROLL factor=4
-            // #pragma HLS PIPELINE
-            shift_reg[k] = shift_reg[k-1];
-        }
-
-        shift_reg[0] = in[i];
-
-        long acc = 0;
-        ACC:for (int k=N_TAPS-1; k>0; --k) {
-            // #pragma HLS UNROLL factor=4
-            // #pragma HLS PIPELINE
-            acc += shift_reg[k] * co_eff[k];
-        }
-
-        out[i] = (int) acc;
-
-    } // total filter size end
-
+    return 0;
 }
