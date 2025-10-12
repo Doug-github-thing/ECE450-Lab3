@@ -39,26 +39,19 @@ void sobel (ap_uint<8> in[WIDTH][HEIGHT], ap_uint<8> out[WIDTH][HEIGHT])
             // Sobel kernel (1,2,1) to the left and right, subtracted
             ap_uint<10> left_side = (in[i-1][j+1])+(2*in[i][j+1])+(in[i+1][j+1]); 
             ap_uint<10> right_side = (in[i-1][j-1])+(2*in[i][j-1])+(in[i+1][j-1]); 
-            Gx[i][j] = right_side - left_side;
+            ap_int<11> Gx = right_side - left_side;
             
             // Sobel kernel (1,2,1) to the below and top, subtracted
             ap_uint<10> bottom_side = (in[i+1][j-1])+(2*in[i+1][j])+(in[i+1][j+1]);
             ap_uint<10> top_side = ((in[i-1][j-1])+(2*in[i-1][j])+(in[i-1][j+1]));
-            Gy[i][j] = bottom_side - top_side;
-        }
-    }
-            
-    RowsLoopNormalization: for (ap_uint<10> i=1; i<HEIGHT-1; ++i) {
-        ColsLoopNormalization: for (ap_uint<10> j=1; j<WIDTH-1; ++j) {
-            #pragma HLS PIPELINE II=1
-            #pragma HLS UNROLL factor=8
-            // Hypotenuse between x and y axis
-            // Recast G to double width for squaring without distortion
-            ap_int<11> this_Gx = Gx[i][j];
-            ap_int<11> this_Gy = Gy[i][j];
+            ap_int<11> Gy = bottom_side - top_side;
 
-            ap_uint<22> GG = (ap_int<22>)this_Gx * this_Gx + (ap_int<22>)this_Gy * this_Gx;
-            ap_uint<11> G = hls::sqrt(GG); // 2^11=2048 > 1443 max output
+            // Use approximation since exact sqrt value is not vital for edge detection 
+            // Use G ~= 0.707 * (|Gx| + |Gy|) instead of the slow pythagorean calculation
+            ap_uint<11> absGx = hls::abs(Gx);
+            ap_uint<11> absGy = hls::abs(Gy);
+            // Multiply by 181 and divide by 256 instead of 0.707, makes cleaner int operation
+            ap_uint<12> G = (absGx + absGy) * 181 >> 8;
 
             // Normalize back to 255 range, clamping max values at a chosen value
             if (G >= NORMALIZATION_FACTOR)
@@ -66,6 +59,25 @@ void sobel (ap_uint<8> in[WIDTH][HEIGHT], ap_uint<8> out[WIDTH][HEIGHT])
             out[i][j] = (G  * 255 / NORMALIZATION_FACTOR);
         }
     }
+            
+    // RowsLoopNormalization: for (ap_uint<10> i=1; i<HEIGHT-1; ++i) {
+    //     ColsLoopNormalization: for (ap_uint<10> j=1; j<WIDTH-1; ++j) {
+    //         #pragma HLS PIPELINE II=1
+    //         #pragma HLS UNROLL factor=8
+    //         // Hypotenuse between x and y axis
+    //         // Recast G to double width for squaring without distortion
+    //         ap_int<11> this_Gx = Gx[i][j];
+    //         ap_int<11> this_Gy = Gy[i][j];
+
+    //         ap_uint<22> GG = (ap_int<22>)this_Gx * this_Gx + (ap_int<22>)this_Gy * this_Gx;
+    //         ap_uint<11> G = hls::sqrt(GG); // 2^11=2048 > 1443 max output
+
+    //         // Normalize back to 255 range, clamping max values at a chosen value
+    //         if (G >= NORMALIZATION_FACTOR)
+    //             G = 255;
+    //         out[i][j] = (G  * 255 / NORMALIZATION_FACTOR);
+    //     }
+    // }
 
     // ap_int<3> Kx[3][3] = {{-1, 0, 1},
     //                       {-2, 0, 2},
