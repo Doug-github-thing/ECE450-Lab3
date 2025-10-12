@@ -30,7 +30,7 @@ void sobel (ap_int<8> in[WIDTH][HEIGHT], ap_int<8> out[WIDTH][HEIGHT])
     #pragma HLS INTERFACE ap_none port=in
     #pragma HLS INTERFACE ap_none port=out
     #pragma HLS INTERFACE ap_ctrl_none port=return
-
+    /**
     // Define Sobel kernels.
     // Typically they're shown as 3x3 matrix with 0s in the middle. That's wasted space.
     
@@ -57,5 +57,32 @@ void sobel (ap_int<8> in[WIDTH][HEIGHT], ap_int<8> out[WIDTH][HEIGHT])
             out[i][j] = (G  * 255 / 1443);
         }
     }
-    
+    */
+
+    ap_int<3> Kx[3][3] = {{-1, 0, 1},
+                          {-2, 0, 2},
+                          {-1, 0, 1}};
+    ap_int<3> Ky[3][3] = {{-1,-2,-1},
+                          { 0, 0, 0},
+                          { 1, 2, 1}};
+
+    for (int y=1; y<HEIGHT-1; ++y) {
+        for (int x=1; x<WIDTH-1; ++x) {
+            // For each pixel of the original, apply 3x3 kernel to its neighbors
+
+            int Gx=0; int Gy=0;
+
+            for (int i=-1; i<=1; ++i)
+                for (int j=-1; j<=1; ++j) {
+                    Gx += in[y+i][x+i] * Kx[1+i][1+j];
+                    Gy += in[y+i][x+i] * Ky[1+i][1+j];
+                }
+            
+            // Hypotenuse between x and y axis
+            int G = sqrtf(Gx*Gx + Gy*Gy);
+
+            // Normalize back to 255 range
+            out[y][x] = (G  * 255 / 1443);
+        }
+    }
 }
