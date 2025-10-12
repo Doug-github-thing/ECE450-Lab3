@@ -31,7 +31,7 @@ void sobel (ap_uint<8> in[WIDTH][HEIGHT], ap_uint<8> out[WIDTH][HEIGHT])
     RowsLoopCalc: for (ap_uint<10> i=1; i<HEIGHT-1; ++i) {
         ColsLoopCalc: for (ap_uint<10> j=1; j<WIDTH-1; ++j) {
             #pragma HLS PIPELINE II=1
-            #pragma HLS UNROLL factor=8
+            #pragma HLS UNROLL factor=510
 
             // Sobel kernel (1,2,1) to the left and right, subtracted
             ap_uint<10> left_side = (in[i-1][j+1])+(2*in[i][j+1])+(in[i+1][j+1]); 
