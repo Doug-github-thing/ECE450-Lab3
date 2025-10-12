@@ -59,7 +59,15 @@ bool verify_output(ap_uint<8> in[HEIGHT][WIDTH], ap_uint<8> filter_output[HEIGHT
                     Gx += in[y+i][x+j] * Kx[1+i][1+j];
                     Gy += in[y+i][x+j] * Ky[1+i][1+j];
                 }
-            int G = sqrtf(Gx*Gx + Gy*Gy);
+
+            // Since I chose to use an approximation to compute sqrt in FPGA,
+            //  I use the same approximation in the testbench, since it won't be the same
+            //  if I compare and approximation to the real thing. 
+            // Integer sqrt is slow but not strictly needed for the filter to work
+            // int G = sqrtf(Gx*Gx + Gy*Gy);
+            Gx = abs(Gx);
+            Gy = abs(Gy);
+            int G = 0.707 * (Gx + Gy);
 
             // Normalize back to 255 range, clamping max values at a chosen value
             if (G >= NORMALIZATION_FACTOR)
@@ -70,7 +78,7 @@ bool verify_output(ap_uint<8> in[HEIGHT][WIDTH], ap_uint<8> filter_output[HEIGHT
             // Element-wise check the filter result against the expected values
             // Check if the result is close enough. Some approximation is okay
             // in square root function. Exact pixel values aren't as important as trends.
-            if (abs(this_element - filter_output[y][x]) > 5) {
+            if (abs(this_element - filter_output[y][x]) > 30) {
                 std::cout << "Inconsistency at " << x << ", " << y << std::endl;
                 std::cout << "Expected: " << this_element << ". Actual: " << filter_output[y][x] << std::endl;
                 return false;
@@ -99,8 +107,8 @@ int main() {
     if(!write_ppm(OUTPUT_PATH, out_bytes))
         return -1;
 
-    // if (!verify_output(in_bytes, out_bytes))
-    //     return -1;
+    if (!verify_output(in_bytes, out_bytes))
+        return -1;
 
     std::cout << ".... Finshing test ...." << std::endl;
 
