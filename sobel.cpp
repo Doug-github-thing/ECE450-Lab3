@@ -1,13 +1,6 @@
-#include <ap_int.h>
-
+#include "sobel.h"
 #include <cmath>
-#include <fstream>
-#include <iostream>
-#include <iomanip>
-#include <cstdlib>
 
-#define WIDTH 512
-#define HEIGHT 512
 /**
  * Sobel flowchart:
  * 
@@ -25,7 +18,7 @@
  *    Normalize values to 255 scale
  */
 
-void sobel (ap_int<8> in[WIDTH][HEIGHT], ap_int<8> out[WIDTH][HEIGHT])
+void sobel (uint8_t in[WIDTH][HEIGHT], uint8_t out[WIDTH][HEIGHT])
 {
     #pragma HLS INTERFACE ap_none port=in
     #pragma HLS INTERFACE ap_none port=out
@@ -74,15 +67,18 @@ void sobel (ap_int<8> in[WIDTH][HEIGHT], ap_int<8> out[WIDTH][HEIGHT])
 
             for (int i=-1; i<=1; ++i)
                 for (int j=-1; j<=1; ++j) {
-                    Gx += in[y+i][x+i] * Kx[1+i][1+j];
-                    Gy += in[y+i][x+i] * Ky[1+i][1+j];
+                    Gx += in[y+i][x+j] * Kx[1+i][1+j];
+                    Gy += in[y+i][x+j] * Ky[1+i][1+j];
                 }
             
             // Hypotenuse between x and y axis
             int G = sqrtf(Gx*Gx + Gy*Gy);
 
-            // Normalize back to 255 range
-            out[y][x] = (G  * 255 / 1443);
+            // Normalize back to 255 range, clamping max values at a chosen value
+            if (G >= NORMALIZATION_FACTOR)
+                G = 255;
+            G = (G  * 255 / NORMALIZATION_FACTOR);
+            out[y][x] = G;
         }
     }
 }
