@@ -3,8 +3,10 @@
 #include <iostream>
 #include <ap_int.h>
 #include <fstream>
+#include <hls_stream.h>
 
-void sobel (ap_uint<8> in_bytes[WIDTH][HEIGHT], ap_uint<8> out_bytes[WIDTH][HEIGHT]);
+// void sobel (ap_uint<8> in_bytes[WIDTH][HEIGHT], ap_uint<8> out_bytes[WIDTH][HEIGHT]);
+void sobel (hls::stream<ap_uint<8>> &in_stream, hls::stream<ap_uint<8>> &out_stream);
 
 
 // Simple PPM reader/writer
@@ -93,20 +95,35 @@ bool verify_output(ap_uint<8> in[HEIGHT][WIDTH], ap_uint<8> filter_output[HEIGHT
 
 int main() {
 
-
     std::cout << "!!!! Starting test !!!!" << std::endl;
     
     ap_uint<8> in_bytes[512][512];
     ap_uint<8> out_bytes[512][512];
     
+    hls::stream<ap_uint<8>> in_stream;
+    hls::stream<ap_uint<8>> out_stream;
+
     if(!read_ppm(INPUT_PATH, in_bytes))
         return -1;
 
-    sobel(in_bytes, out_bytes);
+    // Push pixels into the stream
+    for (int i=0; i<HEIGHT; ++i)
+        for (int j=0; j<WIDTH; ++j)
+            in_stream.write(in_bytes[i][j]);
     
+    // Run the filter
+    sobel(in_stream, out_stream);
+
+    // Pull pixels out of the stream
+    for (int i=0; i<HEIGHT; ++i)
+        for (int j=0; j<WIDTH; ++j)
+            out_bytes[i][j] = out_stream.read();
+    
+    // Write the result image
     if(!write_ppm(OUTPUT_PATH, out_bytes))
         return -1;
 
+    // Test the result against expected behavior
     if (!verify_output(in_bytes, out_bytes))
         return -1;
 
