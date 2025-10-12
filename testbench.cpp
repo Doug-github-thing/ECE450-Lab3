@@ -4,11 +4,11 @@
 #include <ap_int.h>
 #include <fstream>
 
-void sobel (uint8_t in_bytes[WIDTH][HEIGHT], uint8_t out_bytes[WIDTH][HEIGHT]);
+void sobel (ap_int<9> in_bytes[WIDTH][HEIGHT], ap_int<9> out_bytes[WIDTH][HEIGHT]);
 
 
 // Simple PPM reader/writer
-bool read_ppm(const char* filename, uint8_t img[HEIGHT][WIDTH]) {
+bool read_ppm(const char* filename, ap_int<9> img[HEIGHT][WIDTH]) {
     std::ifstream file(filename, std::ios::binary);
     if (!file) {
         std::cout << "Input does not exist" << std::endl;
@@ -29,7 +29,7 @@ bool read_ppm(const char* filename, uint8_t img[HEIGHT][WIDTH]) {
 }
 
 
-bool write_ppm(const char* filename, uint8_t img[HEIGHT][WIDTH]) {
+bool write_ppm(const char* filename, ap_int<9> img[HEIGHT][WIDTH]) {
     std::ofstream file(filename, std::ios::binary);
     if (!file) return false;
 
@@ -39,7 +39,7 @@ bool write_ppm(const char* filename, uint8_t img[HEIGHT][WIDTH]) {
 }
 
 
-bool verify_output(uint8_t in[HEIGHT][WIDTH], uint8_t filter_output[HEIGHT][WIDTH]) {
+bool verify_output(ap_int<9> in[HEIGHT][WIDTH], ap_int<9> filter_output[HEIGHT][WIDTH]) {
 
     ap_int<3> Kx[3][3] = {{-1, 0, 1},
                           {-2, 0, 2},
@@ -65,7 +65,7 @@ bool verify_output(uint8_t in[HEIGHT][WIDTH], uint8_t filter_output[HEIGHT][WIDT
             if (G >= NORMALIZATION_FACTOR)
                 G = 255;
             G = (G  * 255 / NORMALIZATION_FACTOR);
-            uint8_t this_element = G;
+            ap_int<9> this_element = G;
 
             // Element-wise check the filter result against the expected values
             if (this_element != filter_output[y][x]) {
@@ -86,8 +86,8 @@ int main() {
 
     std::cout << "!!!! Starting test !!!!" << std::endl;
     
-    uint8_t in_bytes[512][512];
-    uint8_t out_bytes[512][512];
+    ap_int<9> in_bytes[512][512];
+    ap_int<9> out_bytes[512][512];
     
     if(!read_ppm(INPUT_PATH, in_bytes))
         return -1;

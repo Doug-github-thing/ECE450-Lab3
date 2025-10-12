@@ -18,22 +18,18 @@
  *    Normalize values to 255 scale
  */
 
-void sobel (uint8_t in[WIDTH][HEIGHT], uint8_t out[WIDTH][HEIGHT])
+void sobel (ap_int<9> in[WIDTH][HEIGHT], ap_int<9> out[WIDTH][HEIGHT])
 {
     #pragma HLS INTERFACE ap_none port=in
     #pragma HLS INTERFACE ap_none port=out
     #pragma HLS INTERFACE ap_ctrl_none port=return
-    /**
+
     // Define Sobel kernels.
     // Typically they're shown as 3x3 matrix with 0s in the middle. That's wasted space.
     
     // Simple starter code for testing the testbench before implementation of filter begins
     RowsLoop: for (int i=1; i<HEIGHT-1; ++i) {
         ColsLoop: for (int j=1; j<WIDTH-1; ++j) {
-
-            // Max possible value happens when right and below pixel values are 255 and left and above pixels are 0.
-            // The result is Gx = Gy = 255+2*255+255 = 1020. Only requires 10 bits
-            // Final G value is G = sqrt(2*1020^2) = 1443
 
             // Sobel kernel (1,2,1) to the left and right, subtracted
             int Gx = (in[i-1][j+1])+(2*in[i][j+1])+(in[i+1][j+1])
@@ -44,14 +40,16 @@ void sobel (uint8_t in[WIDTH][HEIGHT], uint8_t out[WIDTH][HEIGHT])
                   - ((in[i-1][j-1])+(2*in[i-1][j])+(in[i-1][j+1]));
             
             // Hypotenuse between x and y axis
-            ap_int<9> G = sqrtf(Gx*Gx + Gy*Gy);
+            ap_int<32> G = sqrtf(Gx*Gx + Gy*Gy);
 
-            // Normalize back to 255 range
-            out[i][j] = (G  * 255 / 1443);
+            // Normalize back to 255 range, clamping max values at a chosen value
+            if (G >= NORMALIZATION_FACTOR)
+                G = 255;
+            G = (G  * 255 / NORMALIZATION_FACTOR);
+            out[i][j] = G;
         }
     }
-    */
-
+    /*
     ap_int<3> Kx[3][3] = {{-1, 0, 1},
                           {-2, 0, 2},
                           {-1, 0, 1}};
@@ -81,4 +79,5 @@ void sobel (uint8_t in[WIDTH][HEIGHT], uint8_t out[WIDTH][HEIGHT])
             out[y][x] = G;
         }
     }
+    */
 }

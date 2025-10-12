@@ -6,6 +6,7 @@
       "--gcc-toolchain=/Xilinx/2025.1/Vitis/tps/lnx64/gcc-8.3.0",
       "-fhls",
       "-hls-syn-headers-dir=/Xilinx/2025.1/Vitis/common/technology/autopilot",
+      "-fhlstoplevel=sobel",
       "-c",
       "/home/dog/school/fpgaece450/p3/sobel/../sobel.cpp"
     ],
