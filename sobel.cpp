@@ -1,6 +1,7 @@
 #include "sobel.h"
-// #include <cmath>
 #include <hls_math.h>
+#include <hls_stream.h>
+
 
 /**
  * Sobel flowchart:
@@ -19,12 +20,20 @@
  *    Normalize values to 255 scale
  */
 
-void sobel (ap_uint<8> in[WIDTH][HEIGHT], ap_uint<8> out[WIDTH][HEIGHT])
-// void sobel (hls::stream<pixel_t> &in_stream, hls::stream<out_t> &out_stream)
+void sobel (hls::stream<ap_uint<8>> &in_stream, hls::stream<ap_uint<8>> &out_stream)
 {
-    #pragma HLS INTERFACE ap_none port=in
-    #pragma HLS INTERFACE ap_none port=out
+    #pragma HLS INTERFACE axis port=in_stream
+    #pragma HLS INTERFACE axis port=out_stream
     #pragma HLS INTERFACE ap_ctrl_none port=return
+
+    ap_uint<8> in[HEIGHT][WIDTH];
+    ap_uint<8> out[HEIGHT][WIDTH];
+
+    RowsLoopInit: for (ap_uint<10> i=0; i<HEIGHT; ++i) {
+        ColsLoopCalcInit: for (ap_uint<10> j=0; j<WIDTH; ++j) {
+            in[i][j] = in_stream.read();
+        }
+    }
 
     // Define Sobel kernels.
     // Typically they're shown as 3x3 matrix with 0s in the middle. That's wasted space.
@@ -55,6 +64,12 @@ void sobel (ap_uint<8> in[WIDTH][HEIGHT], ap_uint<8> out[WIDTH][HEIGHT])
             if (G >= NORMALIZATION_FACTOR)
                 G = 255;
             out[i][j] = (G  * 255 / NORMALIZATION_FACTOR);
+        }
+    }
+
+    RowsLoopFinal: for (ap_uint<10> i=0; i<HEIGHT; ++i) {
+        ColsLoopCalcFinal: for (ap_uint<10> j=0; j<WIDTH; ++j) {
+            out_stream.write(out[i][j]);
         }
     }
 }
