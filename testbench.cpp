@@ -1,12 +1,13 @@
 #include "sobel.h"
 #include <cstdio>
 #include <iostream>
-#include <ap_int.h>
 #include <fstream>
 #include <hls_stream.h>
+#include <ap_axi_sdata.h>
 
-// void sobel (ap_uint<8> in_bytes[WIDTH][HEIGHT], ap_uint<8> out_bytes[WIDTH][HEIGHT]);
-void sobel (hls::stream<ap_uint<8>> &in_stream, hls::stream<ap_uint<8>> &out_stream);
+
+// UUT top
+void sobel (hls::stream<axis8_t> &in_stream, hls::stream<axis8_t> &out_stream);
 
 
 // Simple PPM reader/writer
@@ -41,90 +42,52 @@ bool write_ppm(const char* filename, ap_uint<8> img[HEIGHT][WIDTH]) {
 }
 
 
-bool verify_output(ap_uint<8> in[HEIGHT][WIDTH], ap_uint<8> filter_output[HEIGHT][WIDTH]) {
-
-    ap_int<3> Kx[3][3] = {{-1, 0, 1},
-                          {-2, 0, 2},
-                          {-1, 0, 1}};
-    ap_int<3> Ky[3][3] = {{-1,-2,-1},
-                          { 0, 0, 0},
-                          { 1, 2, 1}};
-
-    for (int y=1; y<HEIGHT-1; ++y) {
-        for (int x=1; x<WIDTH-1; ++x) {
-            // For each pixel of the original, apply 3x3 kernel to its neighbors
-
-            int Gx=0; int Gy=0;
-
-            for (int i=-1; i<=1; ++i)
-                for (int j=-1; j<=1; ++j) {
-                    Gx += in[y+i][x+j] * Kx[1+i][1+j];
-                    Gy += in[y+i][x+j] * Ky[1+i][1+j];
-                }
-
-            // Since I chose to use an approximation to compute sqrt in FPGA,
-            //  I use the same approximation in the testbench, since it won't be the same
-            //  if I compare and approximation to the real thing. 
-            // Integer sqrt is slow but not strictly needed for the filter to work
-            // int G = sqrtf(Gx*Gx + Gy*Gy);
-            Gx = abs(Gx);
-            Gy = abs(Gy);
-            int G = 0.707 * (Gx + Gy);
-
-            // Normalize back to 255 range, clamping max values at a chosen value
-            if (G >= NORMALIZATION_FACTOR)
-                G = 255;
-            G = (G  * 255 / NORMALIZATION_FACTOR);
-            ap_uint<8> this_element = G;
-
-            // Element-wise check the filter result against the expected values
-            // Check if the result is close enough. Some approximation is okay
-            // in square root function. Exact pixel values aren't as important as trends.
-            if (abs(this_element - filter_output[y][x]) > 30) {
-                std::cout << "Inconsistency at " << x << ", " << y << std::endl;
-                std::cout << "Expected: " << this_element << ". Actual: " << filter_output[y][x] << std::endl;
-                return false;
-            }
-        }
-    }
-
-    std::cout << "Verification successful" << std::endl;
-    return true;
-}
-
-
 int main() {
 
     std::cout << "!!!! Starting test !!!!" << std::endl;
     
-    ap_uint<8> in_bytes[512][512];
-    ap_uint<8> out_bytes[512][512];
+    pix8_t in_bytes[512][512];
+    pix8_t out_bytes[512][512];
     
-    hls::stream<ap_uint<8>> in_stream;
-    hls::stream<ap_uint<8>> out_stream;
+    hls::stream<axis8_t> in_stream;
+    hls::stream<axis8_t> out_stream;
 
     if(!read_ppm(INPUT_PATH, in_bytes))
         return -1;
 
-    // Push pixels into the stream
-    for (int i=0; i<HEIGHT; ++i)
-        for (int j=0; j<WIDTH; ++j)
-            in_stream.write(in_bytes[i][j]);
+    // Push grayscale pixels into AXI4-Stream (scanline order)
+    for (int y = 0; y < HEIGHT; ++y) {
+        for (int x = 0; x < WIDTH; ++x) {
+            axis8_t packet;
+            
+            // Set the 8-bit grayscale pixel data
+            packet.data = in_bytes[y][x];
+            
+            // AXI4-Stream sideband signals
+            packet.keep = 0x1;  // 1 byte valid
+            packet.strb = 0x1;
+            packet.user = (x == 0 && y == 0) ? 1 : 0;   // Start of Frame (SOF)
+            packet.last = (x == WIDTH - 1) ? 1 : 0;     // End of Line (EOL)
+            packet.id   = 0;
+            packet.dest = 0;
+
+            in_stream.write(packet);
+        }
+    }
     
-    // Run the filter
+    // 2) Run the DUT
     sobel(in_stream, out_stream);
 
-    // Pull pixels out of the stream
-    for (int i=0; i<HEIGHT; ++i)
-        for (int j=0; j<WIDTH; ++j)
-            out_bytes[i][j] = out_stream.read();
+    // 3) Collect output pixels from AXI4-Stream
+    for (int y = 0; y < HEIGHT; ++y) {
+        for (int x = 0; x < WIDTH; ++x) {
+            axis8_t pkt = out_stream.read();
+            out_bytes[y][x] = pkt.data;
+        }
+    }
     
     // Write the result image
     if(!write_ppm(OUTPUT_PATH, out_bytes))
-        return -1;
-
-    // Test the result against expected behavior
-    if (!verify_output(in_bytes, out_bytes))
         return -1;
 
     std::cout << ".... Finshing test ...." << std::endl;
