@@ -32,31 +32,31 @@ void sobel(hls::stream<axis16_t> &in_stream, hls::stream<axis16_t> &out_stream) 
     #pragma HLS INTERFACE axis port=in_stream
     #pragma HLS INTERFACE axis port=out_stream
 
-    static ap_uint<8> line0[WIDTH];
-    static ap_uint<8> line1[WIDTH];
+    static pix8_t line0[WIDTH];
+    static pix8_t line1[WIDTH];
 
     // 3 × 5 sliding window to process more pixels per cycle
-    ap_uint<8> w0[5]={0,0,0,0,0};
-    ap_uint<8> w1[5]={0,0,0,0,0};
-    ap_uint<8> w2[5]={0,0,0,0,0};
+    pix8_t w0[5]={0,0,0,0,0};
+    pix8_t w1[5]={0,0,0,0,0};
+    pix8_t w2[5]={0,0,0,0,0};
 
     // Clear line buffers for this frame
     init_cols:
-    for(int x=0; x<WIDTH; ++x){
+    for(ap_uint<10> x=0; x<WIDTH; ++x){
 
         line0[x]=0; line1[x]=0;
     }
 
     // Main scan
     row_loop:
-    for(int y=0; y<HEIGHT; ++y) {
+    for(ap_uint<10> y=0; y<HEIGHT; ++y) {
         // Reset window at start of each row
-        for(int i=0; i<5; ++i) {
+        for(ap_uint<3> i=0; i<5; ++i) {
             w0[i]=0; w1[i]=0; w2[i]=0;
         }
 
         col_loop:
-        for(int x=0; x<WIDTH; x+=2) {  // Process 2 pixels per iteration
+        for(ap_uint<10> x=0; x<WIDTH; x+=2) {  // Process 2 pixels per iteration
             #pragma HLS PIPELINE II=1
 
             // Read 2 pixels packed in 16-bit stream
@@ -91,30 +91,38 @@ void sobel(hls::stream<axis16_t> &in_stream, hls::stream<axis16_t> &out_stream) 
             }
 
             // Compute 2 Sobel operations in parallel
+            // Largest possible values for Gx and Gy are 255 + 2*255 + 255 = 1020.
+            // So Gx and Gy only need 11 bits, including sign bit
             
             // First pixel: using window columns [0,1,2]
-            int gx0 = 0, gy0 = 0;
+            int11_t gx0 = 0, gy0 = 0;
             if(y >= 2 && x >= 2) {
-                gx0 = -(int)w0[0] + (int)w0[2]
-                      -2*(int)w1[0] + 2*(int)w1[2]
-                      -(int)w2[0] + (int)w2[2];
-                gy0 = -(int)w0[0] -2*(int)w0[1] - (int)w0[2]
-                      +(int)w2[0] +2*(int)w2[1] + (int)w2[2];
+                gx0 = -(int11_t)w0[0] + (int11_t)w0[2]
+                      -2*(int11_t)w1[0] + 2*(int11_t)w1[2]
+                      -(int11_t)w2[0] + (int11_t)w2[2];
+                gy0 = -(int11_t)w0[0] -2*(int11_t)w0[1] - (int11_t)w0[2]
+                      +(int11_t)w2[0] +2*(int11_t)w2[1] + (int11_t)w2[2];
             }
-            int mag0 = (gx0<0?-gx0:gx0) + (gy0<0?-gy0:gy0);
+            // Add two 11 bit signed together after taking abs
+            uint12_t absGx0 = (gx0<0 ? (uint12_t)(-gx0) : (uint12_t)gx0);
+            uint12_t absGy0 = (gy0<0 ? (uint12_t)(-gy0) : (uint12_t)gy0);
+            uint12_t mag0 = absGx0 + absGy0;
             if(mag0 > 255) mag0 = 255;
             pix8_t edge0 = (y>=2 && x>=2) ? (pix8_t)mag0 : (pix8_t)0;
 
             // Second pixel: using window columns [1,2,3]
-            int gx1 = 0, gy1 = 0;
+            int11_t gx1 = 0, gy1 = 0;
             if(y >= 2 && x >= 1 && valid1) {
-                gx1 = -(int)w0[1] + (int)w0[3]
-                      -2*(int)w1[1] + 2*(int)w1[3]
-                      -(int)w2[1] + (int)w2[3];
-                gy1 = -(int)w0[1] -2*(int)w0[2] - (int)w0[3]
-                      +(int)w2[1] +2*(int)w2[2] + (int)w2[3];
+                gx1 = -(int11_t)w0[1] + (int11_t)w0[3]
+                      -2*(int11_t)w1[1] + 2*(int11_t)w1[3]
+                      -(int11_t)w2[1] + (int11_t)w2[3];
+                gy1 = -(int11_t)w0[1] -2*(int11_t)w0[2] - (int11_t)w0[3]
+                      +(int11_t)w2[1] +2*(int11_t)w2[2] + (int11_t)w2[3];
             }
-            int mag1 = (gx1<0?-gx1:gx1) + (gy1<0?-gy1:gy1);
+            // Add two 11 bit signed together after taking abs
+            uint12_t absGx1 = (gx1<0 ? (uint12_t)(-gx1) : (uint12_t)gx1);
+            uint12_t absGy1 = (gy1<0 ? (uint12_t)(-gy1) : (uint12_t)gy1);
+            uint12_t mag1 = absGx1 + absGx1;
             if(mag1 > 255) mag1 = 255;
             pix8_t edge1 = (y>=2 && x>=1 && valid1) ? (pix8_t)mag1 : (pix8_t)0;
 

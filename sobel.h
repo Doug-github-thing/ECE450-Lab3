@@ -7,7 +7,7 @@
 #define WIDTH 512
 #define HEIGHT 512
 
-typedef ap_axiu<8,1,1,1> axis8_t;
 typedef ap_axiu<16,1,1,1> axis16_t;
 typedef ap_uint<8> pix8_t;
-
+typedef ap_int<11> int11_t;
+typedef ap_uint<12> uint12_t;
